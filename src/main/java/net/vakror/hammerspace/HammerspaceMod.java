@@ -1,12 +1,9 @@
 package net.vakror.hammerspace;
 
 import com.mojang.logging.LogUtils;
-import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -18,6 +15,7 @@ import net.vakror.hammerspace.crafting.ModRecipes;
 import net.vakror.hammerspace.dimension.Dimensions;
 import net.vakror.hammerspace.item.ModCreativeModeTabs;
 import net.vakror.hammerspace.item.ModItems;
+import net.vakror.hammerspace.network.NetworkHandler;
 import net.vakror.hammerspace.packet.ModPackets;
 import org.slf4j.Logger;
 
@@ -43,6 +41,7 @@ public class HammerspaceMod
         ModItems.register(modEventBus);
         // Register ourselves for server and other game events we are interested in
         MinecraftForge.EVENT_BUS.register(this);
+        NetworkHandler.register();
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

@@ -1,10 +1,7 @@
 package net.vakror.hammerspace.item.custom;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
@@ -12,19 +9,14 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
-import net.vakror.hammerspace.capability.HammerspaceProvider;
-import net.vakror.hammerspace.capability.Teleporter;
 import net.vakror.hammerspace.capability.TeleporterProvider;
-import net.vakror.hammerspace.dimension.DimensionUtils;
-import net.vakror.hammerspace.dimension.HammerspaceTeleporter;
+import net.vakror.hammerspace.client.handlers.ClientTeleporterHandler;
 import net.vakror.hammerspace.item.ITeleporterTier;
-import net.vakror.hammerspace.screen.TeleporterScreen;
+import net.vakror.hammerspace.server.handlers.ServerTeleporterHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class TeleporterItem extends Item {
     private final ITeleporterTier tier;
@@ -32,45 +24,15 @@ public class TeleporterItem extends Item {
         super(properties);
         this.tier = tier;
     }
-
+public ITeleporterTier tier() {return tier;}
     @Override
     public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
-        if (!player.isCrouching()) {
-            if (!level.isClientSide) {
-                player.getItemInHand(hand).getCapability(TeleporterProvider.TELEPORTER).ifPresent((teleporter -> {
-                    if (!teleporter.dimensionId().equals("")) {
-                        if (!level.dimension().location().equals(teleporter.getDimIdAsResourceLocation())) {
-                            ServerLevel dimension = DimensionUtils.createWorld(level, teleporter.dimensionId());
-                            dimension.getCapability(HammerspaceProvider.HAMMERSPACE).ifPresent((hammerspace -> {
-                                hammerspace.setTick(teleporter.tickSpeed());
-                                hammerspace.setFluidFlowSpeed(teleporter.fluidFlowSpeed());
-                                hammerspace.setGravity(teleporter.gravity());
-                            }));
-                            teleporter.setFromDimensionTypeId(level.dimensionTypeId().location().toString());
-                            teleporter.setLastUsedLocation(new BlockPos((int) player.position().x, (int) player.position().y, (int) player.position().z));
-                            player.changeDimension(dimension, new HammerspaceTeleporter(player.getItemInHand(hand), (ServerLevel) level, null));
-                        } else {
-                            AtomicReference<ServerLevel> toDimension = new AtomicReference<>(Objects.requireNonNull(level.getServer()).overworld());
-                            level.getServer().getAllLevels().forEach((dim -> {
-                                if (dim.dimensionTypeId().location().toString().equals(teleporter.fromDimensionTypeId())) {
-                                    toDimension.set(dim);
-                                }
-                            }));
-                            if (toDimension.get() != null) {
-                                player.changeDimension(toDimension.get(), new HammerspaceTeleporter(player.getItemInHand(hand), (ServerLevel) level, teleporter.lastUsedLocation()));
-                            }
-                        }
-                    }
-                }));
-            } else {
-                player.getItemInHand(hand).getCapability(TeleporterProvider.TELEPORTER).ifPresent((teleporter -> {
-                    if (teleporter.dimensionId().equals("")) {
-                        Minecraft.getInstance().setScreen(new TeleporterScreen(player.getItemInHand(hand).getCapability(TeleporterProvider.TELEPORTER).orElse(new Teleporter()), hand, this.tier.getMaxWidth(), this.tier.getMaxHeight(), this.tier.getMaxLength(), true, false));
-                    }
-                }));
-            }
-        } else if (level.isClientSide){
-            Minecraft.getInstance().setScreen(new TeleporterScreen(player.getItemInHand(hand).getCapability(TeleporterProvider.TELEPORTER).orElse(new Teleporter()), hand, tier.getMaxWidth(), tier.getMaxHeight(), tier.getMaxLength(), false, true));
+        if (!level.isClientSide) {
+            ServerTeleporterHandler handler = new ServerTeleporterHandler();
+            handler.handleTeleport(player,this, hand);
+        } else {
+            ClientTeleporterHandler handler = new ClientTeleporterHandler();
+            handler.handleTeleport(player, this, hand);
         }
         return super.use(level, player, hand);
     }
